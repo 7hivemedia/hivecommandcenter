@@ -1,0 +1,6 @@
+{
+  "name": "7Hive Media+ Operations Center",
+  "description": "Futuristic sci-fi AI multi-agent operations dashboard for 7HIVE MEDIA+ client onboarding, digital agreement builder, and automated live multi-agent brand audit pipelines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

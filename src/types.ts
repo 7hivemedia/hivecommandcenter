@@ -14,6 +14,7 @@ export interface Client {
   noteKey: string;
   onboardedAt: string;
   status: "active" | "pending" | "completed";
+  logoUrl?: string;
   
   // Multi-Agent Pipeline Status
   auditStatus: "idle" | "running" | "completed" | "failed";

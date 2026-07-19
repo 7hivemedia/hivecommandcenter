@@ -157,7 +157,43 @@ Target Asset: [Website]
 
       setIsLoadingBackend(true);
       try {
-        const loadedClients = await loadUserCollection<Client>("clients", currentUser.uid);
+        let loadedClients = await loadUserCollection<Client>("clients", currentUser.uid);
+        if (loadedClients.length === 0) {
+          const defaultClients: Client[] = [
+            {
+              id: "cli_shigma",
+              userId: currentUser.uid,
+              name: "Shigma Shine Enterprise",
+              mail: "shigmashinesolar@gmail.com",
+              phone: "9716890010",
+              address: "Gate no-5,KH-900 Gorund floor, Badli Industrial Area, Siraspur, Delhi",
+              services: "Meta Ads, GMB Service( Local SEO), Social Media Marketing",
+              document: "raw_direct_onboarding.json",
+              usernames: "@shigmashineenterprise",
+              passwords: "temp_token_h08ax",
+              website: "www.shigmashine.com",
+              paymentPlan: "Standard WAAS Plan - ₹1,25,000/mo",
+              noteKey: "Ads budget-Average 15000 weekly optimise, 2-3 post and 2 video/Month",
+              onboardedAt: new Date().toLocaleDateString(),
+              status: "active",
+              logoUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=128&h=128&fit=crop&auto=format",
+              auditStatus: "completed",
+              auditProgress: 100,
+              activeAgentIndex: -1,
+              agentOutputs: {
+                main: "### Shigma Shine Enterprise - Executive Summary\n- Solid local search presence potential.\n- Action item: Maximize Google Map Pack visibility with local citations and review campaign.\n- Plan to deploy highly localized Meta Ads targeting Delhi residential and business zones.",
+                reviewer: "### Reviewer Feedback\n- Branding guidelines look consistent. Recommending higher density of solar/clean-tech visual assets.",
+                researcher: "### Market Discovery Report\n- Competitive search volume detected for Siraspur and North Delhi industrial hubs.\n- Highlight low-barrier conversion paths for business solar inquiries.",
+                seo: "### SEO Cluster Mapping\n- High priority keywords: 'industrial solar Siraspur', 'Delhi commercial solar installations'.\n- Implement semantic breadcrumbs on shigmashine.com.",
+                aeo: "### AEO Optimization Blueprint\n- Structure answers for 'How to choose industrial solar partner in Siraspur' to target Google Answer Box."
+              }
+            }
+          ];
+          for (const item of defaultClients) {
+            await saveDocument("clients", item.id, item);
+          }
+          loadedClients = defaultClients;
+        }
         setClients(loadedClients);
         prevClientsRef.current = loadedClients;
 

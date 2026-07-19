@@ -14,7 +14,8 @@ import {
   DollarSign, 
   Globe,
   Loader2,
-  FileText
+  FileText,
+  Edit2
 } from "lucide-react";
 import { Client, RetainerPlan } from "../types";
 
@@ -24,6 +25,10 @@ interface ClientsViewProps {
   retainerPlans: RetainerPlan[];
   addSystemLog: (source: string, msg: string, type: "info" | "success" | "warning" | "error" | "agent") => void;
 }
+
+const getInitials = (name: string) => {
+  return name.trim().split(/\s+/).map(n => n[0]).join("").substring(0, 2).toUpperCase() || "?";
+};
 
 export default function ClientsView({ 
   clients, 
@@ -35,6 +40,7 @@ export default function ClientsView({
   const [activeClientId, setActiveClientId] = useState<string>(clients[0]?.id || "");
   const [activeReportTab, setActiveReportTab] = useState<"main" | "reviewer" | "researcher" | "seo" | "aeo">("main");
   const [onboardingStep, setOnboardingStep] = useState<1 | 2>(1);
+  const [isEditingClient, setIsEditingClient] = useState(false);
 
   // Form states
   const [newClientName, setNewClientName] = useState("");
@@ -45,7 +51,21 @@ export default function ClientsView({
   const [newClientWebsite, setNewClientWebsite] = useState("");
   const [newClientPaymentPlan, setNewClientPaymentPlan] = useState("Standard WAAS Plan - ₹1,25,000/mo");
   const [newClientNoteKey, setNewClientNoteKey] = useState("");
+  const [newClientLogoUrl, setNewClientLogoUrl] = useState("");
   const [onboardingDocument, setOnboardingDocument] = useState<File | null>(null);
+
+  // Edit Client Form states
+  const [editClientName, setEditClientName] = useState("");
+  const [editClientEmail, setEditClientEmail] = useState("");
+  const [editClientPhone, setEditClientPhone] = useState("");
+  const [editClientAddress, setEditClientAddress] = useState("");
+  const [editClientServices, setEditClientServices] = useState("");
+  const [editClientWebsite, setEditClientWebsite] = useState("");
+  const [editClientPaymentPlan, setEditClientPaymentPlan] = useState("");
+  const [editClientNoteKey, setEditClientNoteKey] = useState("");
+  const [editClientUsernames, setEditClientUsernames] = useState("");
+  const [editClientPasswords, setEditClientPasswords] = useState("");
+  const [editClientLogoUrl, setEditClientLogoUrl] = useState("");
 
   // Auto-select first client when list loads or changes
   React.useEffect(() => {
@@ -65,6 +85,49 @@ export default function ClientsView({
   }, [retainerPlans, newClientPaymentPlan]);
 
   const selectedClient = clients.find(c => c.id === activeClientId);
+
+  const handleOpenEditModal = () => {
+    if (!selectedClient) return;
+    setEditClientName(selectedClient.name);
+    setEditClientEmail(selectedClient.mail);
+    setEditClientPhone(selectedClient.phone || "");
+    setEditClientAddress(selectedClient.address || "");
+    setEditClientWebsite(selectedClient.website || "");
+    setEditClientPaymentPlan(selectedClient.paymentPlan || "");
+    setEditClientServices(selectedClient.services || "");
+    setEditClientNoteKey(selectedClient.noteKey || "");
+    setEditClientUsernames(selectedClient.usernames || "");
+    setEditClientPasswords(selectedClient.passwords || "");
+    setEditClientLogoUrl(selectedClient.logoUrl || "");
+    setIsEditingClient(true);
+  };
+
+  const handleUpdateClient = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedClient) return;
+    if (!editClientName.trim() || !editClientEmail.trim()) {
+      alert("Name and Email are required fields.");
+      return;
+    }
+
+    setClients(prev => prev.map(c => c.id === selectedClient.id ? {
+      ...c,
+      name: editClientName.trim(),
+      mail: editClientEmail.trim(),
+      phone: editClientPhone.trim(),
+      address: editClientAddress.trim(),
+      website: editClientWebsite.trim(),
+      paymentPlan: editClientPaymentPlan,
+      services: editClientServices.trim(),
+      noteKey: editClientNoteKey.trim(),
+      usernames: editClientUsernames.trim(),
+      passwords: editClientPasswords.trim(),
+      logoUrl: editClientLogoUrl.trim()
+    } : c));
+
+    setIsEditingClient(false);
+    addSystemLog("DIRECTOR", `Client profile updated successfully: ${editClientName.trim()}`, "success");
+  };
 
   const handleCreateClient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,6 +154,7 @@ export default function ClientsView({
       noteKey: newClientNoteKey.trim() || "No custom override notes supplied.",
       onboardedAt: new Date().toLocaleDateString(),
       status: "pending",
+      logoUrl: newClientLogoUrl.trim(),
       auditStatus: "idle",
       auditProgress: 0,
       activeAgentIndex: -1,
@@ -114,6 +178,7 @@ export default function ClientsView({
     setNewClientServices("");
     setNewClientWebsite("");
     setNewClientNoteKey("");
+    setNewClientLogoUrl("");
     setOnboardingDocument(null);
     setOnboardingStep(1);
 
@@ -249,17 +314,33 @@ export default function ClientsView({
                       : "bg-transparent border-transparent text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-xs truncate max-w-[150px]">{cli.name}</span>
-                    <span className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold border ${
-                      cli.status === "active" 
-                        ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
-                        : "bg-amber-50 border-amber-200 text-amber-700"
-                    }`}>
-                      {cli.status}
-                    </span>
+                  <div className="flex items-center space-x-2.5">
+                    {cli.logoUrl ? (
+                      <img 
+                        src={cli.logoUrl} 
+                        alt={`${cli.name} Logo`} 
+                        className="w-7 h-7 rounded-md object-contain bg-slate-50 border border-slate-200 shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-md bg-blue-50 text-blue-700 font-bold text-[10px] flex items-center justify-center border border-blue-100 shrink-0 uppercase">
+                        {getInitials(cli.name)}
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-xs truncate text-slate-900 pr-1">{cli.name}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase font-bold border shrink-0 ${
+                          cli.status === "active" 
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+                            : "bg-amber-50 border-amber-200 text-amber-700"
+                        }`}>
+                          {cli.status}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400 block mt-0.5 truncate">{cli.website}</span>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-400 block mt-1 truncate">{cli.website}</span>
                   
                   {/* Pipeline small progress bar indicator */}
                   {cli.auditStatus === "running" && (
@@ -291,17 +372,40 @@ export default function ClientsView({
             <div className="w-full md:w-96 border-r border-slate-200 bg-white overflow-y-auto p-5 space-y-5 flex flex-col justify-between">
               <div className="space-y-5">
                 {/* Client Header */}
-                <div className="flex justify-between items-start border-b border-slate-100 pb-3">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 tracking-tight">{selectedClient.name}</h3>
-                    <span className="text-[10px] text-slate-400 font-mono">ID: {selectedClient.id}</span>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center space-x-3 min-w-0">
+                    {selectedClient.logoUrl ? (
+                      <img 
+                        src={selectedClient.logoUrl} 
+                        alt={`${selectedClient.name} Logo`} 
+                        className="w-11 h-11 rounded-lg object-contain bg-slate-50 border border-slate-200 shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-lg bg-blue-50 text-blue-700 font-extrabold text-xs flex items-center justify-center border border-blue-150 shrink-0 uppercase">
+                        {getInitials(selectedClient.name)}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-bold text-slate-900 tracking-tight truncate">{selectedClient.name}</h3>
+                      <span className="text-[10px] text-slate-400 font-mono block mt-0.5">ID: {selectedClient.id}</span>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteClient(selectedClient.id)}
-                    className="p-1.5 rounded-lg border border-rose-100 text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex items-center space-x-1.5 shrink-0">
+                    <button
+                      onClick={handleOpenEditModal}
+                      className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-all cursor-pointer"
+                      title="Edit client details"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClient(selectedClient.id)}
+                      className="p-1.5 rounded-lg border border-rose-100 text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Contact coordinates list */}
@@ -601,6 +705,73 @@ export default function ClientsView({
                       className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
                     />
                   </div>
+
+                  <div className="space-y-1.5 pt-1">
+                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide block">Company Brand Logo</label>
+                    <div className="flex items-center space-x-3 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+                      {newClientLogoUrl ? (
+                        <div className="relative shrink-0">
+                          <img 
+                            src={newClientLogoUrl} 
+                            alt="Logo preview" 
+                            className="w-11 h-11 rounded-lg object-contain bg-white border border-slate-200"
+                            referrerPolicy="no-referrer"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setNewClientLogoUrl("")}
+                            className="absolute -top-1.5 -right-1.5 bg-rose-500 hover:bg-rose-600 text-white font-bold w-4 h-4 rounded-full flex items-center justify-center text-[8px] border border-white shadow-sm cursor-pointer"
+                            title="Remove logo"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-11 h-11 rounded-lg bg-slate-100 text-slate-400 font-bold text-xs flex items-center justify-center border border-dashed border-slate-200 shrink-0 select-none uppercase">
+                          No Logo
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <input
+                          type="text"
+                          value={newClientLogoUrl}
+                          onChange={(e) => setNewClientLogoUrl(e.target.value)}
+                          placeholder="Paste Logo Image URL..."
+                          className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[10px] text-slate-800 focus:outline-none focus:border-blue-500 transition"
+                        />
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] text-slate-400 font-medium">Or select locally:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "image/*";
+                              input.onchange = (e: any) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  const file = e.target.files[0];
+                                  if (file.size > 2 * 1024 * 1024) {
+                                    alert("Logo files must be under 2MB.");
+                                    return;
+                                  }
+                                  const reader = new FileReader();
+                                  reader.onload = (event: any) => {
+                                    setNewClientLogoUrl(event.target.result);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              };
+                              input.click();
+                            }}
+                            className="px-2 py-0.5 rounded border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-[9px] font-bold text-slate-600 hover:text-blue-600 bg-white transition cursor-pointer"
+                          >
+                            Browse file
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Right Column: Services, Guidelines & Dossiers */}
@@ -679,6 +850,264 @@ export default function ClientsView({
                 >
                   <UserPlus className="w-3.5 h-3.5" />
                   <span>Register & Compile Dossier</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Client Profile Modal Overlay */}
+      {isEditingClient && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6 overflow-y-auto font-sans">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl max-w-4xl w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-sm md:text-base">
+                    Edit Client/Lead Profile
+                  </h3>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Modify target coordinates, specified services, active retainer plans, and ingress credentials.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsEditingClient(false)}
+                className="text-slate-400 hover:text-slate-600 font-bold p-1.5 hover:bg-slate-100 rounded-lg transition"
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleUpdateClient} className="flex flex-col flex-1 overflow-y-auto">
+              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[calc(85vh-140px)] overflow-y-auto">
+                {/* Left Column: Client Identity & Coordinates */}
+                <div className="space-y-4">
+                  <div className="border-b border-slate-100 pb-2">
+                    <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Identity & Contact Coordinates</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Brand Name <span className="text-rose-500">*</span></label>
+                      <input
+                        type="text"
+                        required
+                        value={editClientName}
+                        onChange={(e) => setEditClientName(e.target.value)}
+                        placeholder="e.g. Acme Studio"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Email Address <span className="text-rose-500">*</span></label>
+                      <input
+                        type="email"
+                        required
+                        value={editClientEmail}
+                        onChange={(e) => setEditClientEmail(e.target.value)}
+                        placeholder="e.g. hello@acme.com"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Phone Number</label>
+                      <input
+                        type="text"
+                        value={editClientPhone}
+                        onChange={(e) => setEditClientPhone(e.target.value)}
+                        placeholder="+91 99201 23456"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Website URL</label>
+                      <input
+                        type="text"
+                        value={editClientWebsite}
+                        onChange={(e) => setEditClientWebsite(e.target.value)}
+                        placeholder="https://acme.com"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Retainer Model</label>
+                    <select
+                      value={editClientPaymentPlan}
+                      onChange={(e) => setEditClientPaymentPlan(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                    >
+                      {retainerPlans.map((rp) => (
+                        <option key={rp.id} value={`${rp.name} - ${rp.price}`}>
+                          {rp.name} - {rp.price}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Headquarters Address</label>
+                    <input
+                      type="text"
+                      value={editClientAddress}
+                      onChange={(e) => setEditClientAddress(e.target.value)}
+                      placeholder="e.g. 100 Main St, Chicago, IL"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 pt-1">
+                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide block">Company Brand Logo</label>
+                    <div className="flex items-center space-x-3 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+                      {editClientLogoUrl ? (
+                        <div className="relative shrink-0">
+                          <img 
+                            src={editClientLogoUrl} 
+                            alt="Logo preview" 
+                            className="w-11 h-11 rounded-lg object-contain bg-white border border-slate-200"
+                            referrerPolicy="no-referrer"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setEditClientLogoUrl("")}
+                            className="absolute -top-1.5 -right-1.5 bg-rose-500 hover:bg-rose-600 text-white font-bold w-4 h-4 rounded-full flex items-center justify-center text-[8px] border border-white shadow-sm cursor-pointer"
+                            title="Remove logo"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-11 h-11 rounded-lg bg-slate-100 text-slate-400 font-bold text-xs flex items-center justify-center border border-dashed border-slate-200 shrink-0 select-none uppercase">
+                          No Logo
+                        </div>
+                      )}
+                      
+                      <div className="flex-1 space-y-1.5 min-w-0">
+                        <input
+                          type="text"
+                          value={editClientLogoUrl}
+                          onChange={(e) => setEditClientLogoUrl(e.target.value)}
+                          placeholder="Paste Logo Image URL..."
+                          className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-[10px] text-slate-800 focus:outline-none focus:border-blue-500 transition"
+                        />
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] text-slate-400 font-medium">Or select locally:</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "image/*";
+                              input.onchange = (e: any) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  const file = e.target.files[0];
+                                  if (file.size > 2 * 1024 * 1024) {
+                                    alert("Logo files must be under 2MB.");
+                                    return;
+                                  }
+                                  const reader = new FileReader();
+                                  reader.onload = (event: any) => {
+                                    setEditClientLogoUrl(event.target.result);
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              };
+                              input.click();
+                            }}
+                            className="px-2 py-0.5 rounded border border-slate-200 hover:border-blue-300 hover:bg-blue-50 text-[9px] font-bold text-slate-600 hover:text-blue-600 bg-white transition cursor-pointer"
+                          >
+                            Browse file
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Services & Secured Ingress */}
+                <div className="space-y-4">
+                  <div className="border-b border-slate-100 pb-2">
+                    <span className="text-[11px] font-bold text-slate-900 uppercase tracking-wider">Services, Guidelines & Credentials</span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Specified Services</label>
+                    <textarea
+                      rows={2}
+                      value={editClientServices}
+                      onChange={(e) => setEditClientServices(e.target.value)}
+                      placeholder="e.g. SEO indexing clusters, viral copywriting campaigns"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Internal Override Notes</label>
+                    <textarea
+                      rows={2}
+                      value={editClientNoteKey}
+                      onChange={(e) => setEditClientNoteKey(e.target.value)}
+                      placeholder="Any unique business intelligence, override guidelines, or custom notes..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                    />
+                  </div>
+
+                  <div className="border-t border-slate-100 pt-3 mt-1 space-y-3">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Secured Ingress Credentials</span>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Username Coordinate</label>
+                        <input
+                          type="text"
+                          value={editClientUsernames}
+                          onChange={(e) => setEditClientUsernames(e.target.value)}
+                          placeholder="e.g. @acmestudio"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Temporary Key</label>
+                        <input
+                          type="text"
+                          value={editClientPasswords}
+                          onChange={(e) => setEditClientPasswords(e.target.value)}
+                          placeholder="e.g. temp_token_abc"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500 focus:bg-white transition"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingClient(false)}
+                  className="px-4 py-2 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 border border-slate-200 bg-white transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white transition shadow-sm hover:shadow-md cursor-pointer flex items-center justify-center space-x-2"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Save Profile Changes</span>
                 </button>
               </div>
             </form>
